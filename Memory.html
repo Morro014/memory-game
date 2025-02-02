@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Color Memory</title>
+    <style>
+        td {
+            border: 1px solid black;
+            width: 200px;
+            height: 200px;
+            z-index: 0;
+        }
+
+        td img {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            width: 90%;
+            z-index: 10;
+        }
+        div img {
+            position: relative;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 90%;
+            z-index: 10;
+            backface-visibility: hidden;
+
+            
+           
+        }
+
+        tr {
+            border: 1px solid black;
+        }
+
+        table {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+        .flip-card{
+            background-color: transparent;
+            width: 200px;
+            border: 1px solid black;
+            height: 200px;
+            perspective: 1000px;
+
+        }
+        .flip-card-inner{
+          position: relative;
+          width: 100%;
+          height: 100%;
+          text-align: center;
+          transition: transform 0.8s;
+          transform-style: preserve-3d;
+        }
+        .flip-card-front, .flip-card-back {
+         position: absolute;
+         width: 100%;
+         height: 100%;
+         -webkit-backface-visibility: hidden;
+         backface-visibility: hidden;
+        }
+        .flip-card-back {
+          background-color:rgb(172, 115, 115);
+          color: white;
+          transform: rotateY(180deg);
+        }
+        .flip-card-front {
+         background-color: rgb(117, 0, 0);}
+
+
+        @keyframes pulse{
+            0% {width:90%; height: 90%}
+            50% {width:100%; height: 100%}
+            100%{width:90%; height: 90%;}
+        }
+        @keyframes pulse2{
+            0% {width:90%;}
+            50% {width:100%;}
+            100% {width:90%;}
+
+            
+        }
+        img:hover {
+            animation-name: pulse;
+            animation-duration: 0.5s;
+        }
+    </style>
+</head>
+
+<body style="background-color:rgb(44, 36, 36)">
+    <!-- Insert the basic DOM Elements, that you want to use, h2-Header, table...-->
+    <h2>Memory</h2>
+
+    <!-- Write JavaScript Code to manipulate the DOM-->
+     <form action = "Memory.html" method="get" onsubmit="buildGame(this)" id="generator">
+        <label for="rows">Rows:</label>
+        <input type="number" id="rows" name="rows">
+        <label for="collums">Columns:</label>
+        <input type="number" id="collums" name="cols">
+        <input type="submit" value="Generate">
+        <input type="reset">
+
+     </form>
+    <script>
+            var sx = 4;
+            var sy = 4;
+            let fields;
+            fields = sx * sy;
+            let clickable = true;
+            let prevId;
+            let turn = 0;
+            let cols;
+            let moves=0;
+            let fieldValues=[];
+            let pairsFound=0;
+            let imgs;
+            let searchTerms=["cat","dog","mouse","elephant","tiger","lion","bear","wolf","fox","rabbit","deer","horse","cow","pig","sheep","goat","chicken","duck","turkey","penguin"];
+
+        async function  buildGame() {
+            // playfield size
+            event.preventDefault();
+            sx = rows.value;
+            sy= collums.value;
+            fields = sx * sy;
+            
+            if(fields % 2 != 0){
+                alert("Please enter an even number of fields");
+                return;
+            }else if(fields/2 > 20){
+                alert("Too many fields");
+                return;
+            }
+            document.getElementById("generator").remove();
+            // generate colors
+            var imgs_count = fields / 2;
+            cols =  generateHslaColors(50, 50, 1.0, imgs_count);
+            imgs = await generateImges(imgs_count);
+            let table = document.createElement("table");
+
+            let fieldId=0;
+            for(let i=0; i<sy; i++){
+                let tr = document.createElement("tr");
+                for(let j=0; j<sx; j++){
+                    let td= document.createElement("td");
+                    td.setAttribute("onclick", "flipImage("+fieldId+")");
+                    let flip_card= document.createElement("div");
+                    flip_card.setAttribute("class", "flip-card");
+                    td.appendChild(flip_card);
+                    flip_card.setAttribute("id","container"+fieldId);
+
+                    let flip_card_inner= document.createElement("div");
+                    flip_card_inner.setAttribute("class", "flip-card-inner");
+                    flip_card_inner.setAttribute("id","card"+fieldId);
+                    flip_card.appendChild(flip_card_inner);
+
+                    let flip_card_front= document.createElement("div");
+                    flip_card_front.setAttribute("class", "flip-card-front");
+                    flip_card_inner.appendChild(flip_card_front);
+
+        
+
+              
+
+                    let flip_card_back= document.createElement("div");
+                    flip_card_back.setAttribute("class", "flip-card-back");
+                    flip_card_back.setAttribute("id","field"+fieldId);
+                    flip_card_inner.appendChild(flip_card_back);
+
+                    let back_img = document.createElement("img");
+                    back_img.setAttribute("id", "img"+fieldId);
+                    flip_card_back.appendChild(back_img);
+                    tr.appendChild(td);
+                    fieldValues.push(-1);
+                    fieldId++;
+            }
+            table.appendChild(tr);
+
+        }
+        document.body.appendChild(table);
+        populateField();
+        }
+        async function flipImage(id){
+            if(fieldValues[id]!= -1 && id != prevId && clickable){
+                flip_card(id,180)
+                moves++;
+                turn++;
+                if (turn==1){
+                    prevId=id;
+                }
+                else if(turn==2){
+                    if(fieldValues[id] != fieldValues[prevId]){
+                       clickable=false;
+                       await sleep(1000);
+                       flip_card(id,0);
+                       flip_card(prevId,0);
+                        clickable=true;
+                    }
+                    else{
+                        fieldValues[id]=-1;
+                        fieldValues[prevId]= -1;
+                        await sleep(500);
+                        document.getElementById("img"+id).style.animation = "pulse2 0.5s linear";
+                        document.getElementById("img"+prevId).style.animation = "pulse2 0.5s linear";
+                        pairsFound++;
+                        if(pairsFound >= fields/2){
+                            alert("You won in "+(moves-fields)+" moves");
+                            for(let i=0; i<fields; i++){
+                                console.log(i);
+                                flip_card(i,720);
+                                await sleep(50);
+                            }
+                            await sleep(500);
+                             for(let i=0; i<fields; i++){
+                                console.log(i);
+                                flip_card(i,0);
+                                await sleep(50);
+
+                            }
+                            await sleep(1000);
+                            imgs= await generateImges(imgs_count);
+                            populateField();
+                            pairsFound=0;
+                            moves=0;
+
+
+                        }
+                   
+                    }
+                    turn=0;
+                    prevId=-1;
+                }
+         
+            }
+        }
+        function populateField(){
+            for(let i=0; i<fieldValues.length/2; i++){
+                let rand = Math.floor(Math.random()*fieldValues.length);
+                for(let l=0; l<2; l++){
+                    while(fieldValues[rand] != -1){
+                        rand = Math.floor(Math.random()*fieldValues.length);
+                    }
+                    fieldValues[rand]=i;
+                    document.getElementById("field"+rand).style.backgroundColor= cols[fieldValues[rand]];
+                    document.getElementById("img"+rand).src=imgs[fieldValues[rand]];
+                    document.getElementById("img"+rand).style.animation = "";
+                }
+            }
+        } 
+
+        // from https://mika-s.github.io/javascript/colors/hsl/2017/12/05/generating-random-colors-in-javascript.html
+        function generateHslaColors(saturation, lightness, alpha, amount) {
+            var colors = [];
+            var huedelta = Math.trunc(360 / amount);
+
+            for (var i = 0; i < amount; i++) {
+                var hue = i * huedelta;
+                colors.push("hsla(" + hue + ", "+ saturation  +"%," + lightness +"%," + alpha+")");
+            }
+
+            return colors;
+        }
+        async function generateImges(amount){
+            let imgs = [];
+            let searchTerm= searchTerms[Math.floor((Math.random()*searchTerms.length))];
+            let url = "https://api.giphy.com/v1/gifs/search?api_key=M3CIW2XTymUVwiSxlBoDSNSEaSm16JPd&q="+searchTerm;
+            let response = await fetch(url);
+            let json= await response.json();
+
+            for(let i=0; i<amount; i++){
+                let img = json.data[i].images.original.url;
+                imgs.push(img);
+            }
+            return imgs;
+        }
+        function flip_card(id, deg){
+            document.getElementById("card"+id).style.transform = "rotateY("+deg+"deg)";
+        }
+        function sleep(ms){
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+    </script>
+</body>
+
+</html>
